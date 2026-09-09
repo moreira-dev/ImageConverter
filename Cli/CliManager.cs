@@ -29,9 +29,15 @@ public class CliManager
         new MenuOption(MenuCommand.Exit, "Exit")
     };
 
-    private readonly FileBrowser _imageBrowser = new FileBrowser("Select an image", ImageFormats.AllExtensions);
+    private readonly FileBrowser _imageBrowser;
 
-    private readonly ImageConversion _imageConversion = new ImageConversion();
+    private readonly ImageConversion _conversionService;
+
+    public CliManager(ImageConversion conversionService)
+    {
+        _conversionService = conversionService;
+        _imageBrowser = new FileBrowser("Select an image", _conversionService.ImageFormats.AllExtensions);
+    }
 
     private void ShowTitle()
     {
@@ -42,7 +48,7 @@ public class CliManager
     {
         AnsiConsole.WriteLine("Convert images to other formats!");
         AnsiConsole.WriteLine("Supported formats:");
-        AnsiConsole.WriteLine(string.Join(", ", ImageFormats.AllExtensions));
+        AnsiConsole.WriteLine(string.Join(", ", _conversionService.ImageFormats.AllExtensions));
     }
 
     private MenuOption AskForCommand()
@@ -57,7 +63,7 @@ public class CliManager
     private ImageFormat AskForOutputFormat(ImageFormat? excludeFormat = null)
     {
         // We don't want to output an image to the same format as the input image
-        IReadOnlyList<ImageFormat> supportedFormats = ImageFormats.SupportedFormats.Where(format => format != excludeFormat).ToList();
+        IReadOnlyList<ImageFormat> supportedFormats = _conversionService.ImageFormats.SupportedFormats.Where(format => format != excludeFormat).ToList();
         
         return AnsiConsole.Prompt(
             new SelectionPrompt<ImageFormat>()
@@ -76,7 +82,7 @@ public class CliManager
             return;
         }
 
-        ImageFormat? sourceFormat = ImageFormats.GetFormatFromFilePath(imagePath);
+        ImageFormat? sourceFormat = _conversionService.ImageFormats.GetFormatFromFilePath(imagePath);
 
         AnsiConsole.MarkupLine($"Selected [green]{Markup.Escape(imagePath)}[/] ([blue]{sourceFormat}[/])");
 
@@ -84,7 +90,7 @@ public class CliManager
 
         try
         {
-            string outputPath = _imageConversion.Convert(imagePath, targetFormat);
+            string outputPath = _conversionService.Convert(imagePath, targetFormat);
 
             AnsiConsole.MarkupLine($"Converted to [green]{Markup.Escape(outputPath)}[/]");
         }

@@ -1,12 +1,23 @@
 ﻿using ImageConverter.Cli;
+using ImageConverter.Models.Converters;
+using ImageConverter.Services;
 
 namespace ImageConverter;
 
-class Program
+internal class Program
 {
-    public static void Main(string[] args)
+    private static void Main(string[] args)
     {
-        CliManager cli = new CliManager();
+        // Source of truth for supported formats. Update here when new formats are supported.
+        FormatConverter[] supportedFormats = new FormatConverter[]
+        {
+            new JpgConverter(),
+            new PngConverter(),
+            new WebpConverter()
+        };
+        ImageConversion conversionService = new ImageConversion(supportedFormats);
+        
+        CliManager cli = new CliManager(conversionService);
         
         cli.Run();
     }
