@@ -1,4 +1,6 @@
+using ImageConverter.Enums;
 using ImageConverter.Models;
+using ImageConverter.Services;
 using Spectre.Console;
 
 namespace ImageConverter.Cli;
@@ -29,6 +31,8 @@ public class CliManager
 
     private readonly FileBrowser _imageBrowser = new FileBrowser("Select an image", ImageFormats.AllExtensions);
 
+    private readonly ImageConversion _imageConversion = new ImageConversion();
+
     private void ShowTitle()
     {
         AnsiConsole.MarkupLine("[DarkViolet]Image[/] [bold DodgerBlue2]Converter[/]");
@@ -50,6 +54,17 @@ public class CliManager
                 .AddChoices(_menuOptions));
     }
 
+    private ImageFormat AskForOutputFormat(ImageFormat? excludeFormat = null)
+    {
+        // We don't want to output an image to the same format as the input image
+        IReadOnlyList<ImageFormat> supportedFormats = ImageFormats.SupportedFormats.Where(format => format != excludeFormat).ToList();
+        
+        return AnsiConsole.Prompt(
+            new SelectionPrompt<ImageFormat>()
+                .Title("[bold]Choose an output format:[/]")
+                .AddChoices(supportedFormats));
+    }
+
     private void ConvertOneImage()
     {
         string? imagePath = _imageBrowser.SelectFile();
@@ -61,9 +76,22 @@ public class CliManager
             return;
         }
 
-        var format = ImageFormats.GetFormatFromFilePath(imagePath);
+        ImageFormat? sourceFormat = ImageFormats.GetFormatFromFilePath(imagePath);
 
-        AnsiConsole.MarkupLine($"Selected [green]{Markup.Escape(imagePath)}[/] ([blue]{format}[/])");
+        AnsiConsole.MarkupLine($"Selected [green]{Markup.Escape(imagePath)}[/] ([blue]{sourceFormat}[/])");
+
+        ImageFormat targetFormat = AskForOutputFormat(sourceFormat);
+
+        try
+        {
+            string outputPath = _imageConversion.Convert(imagePath, targetFormat);
+
+            AnsiConsole.MarkupLine($"Converted to [green]{Markup.Escape(outputPath)}[/]");
+        }
+        catch (Exception exception)
+        {
+            AnsiConsole.MarkupLine($"[red]{Markup.Escape(exception.Message)}[/]");
+        }
     }
 
     public void Run()

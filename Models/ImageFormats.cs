@@ -35,24 +35,32 @@ public static class ImageFormats
     /// Returns a list of all supported formats
     /// e.g. ["JPG", "PNG", "WEBP"]
     /// </summary>
-    public static IReadOnlyList<ImageFormat> SupportedFormats
+    public static IEnumerable<ImageFormat> SupportedFormats
     {
         get
         {
-            return _supportedFormats.Keys.ToList();
+            return _supportedFormats.Keys;
         }
     }
 
     /// <summary>
     /// Returns a list of all extensions for the given format
     /// </summary>
-    /// <param name="format">E.g. "WEBP"</param>
-    /// <returns>A list of extensions for the format. E.g. [".webp"] or null</returns>
     public static IReadOnlyList<string>? GetExtensionsFor(ImageFormat format)
     {
         return _supportedFormats.GetValueOrDefault(format);
     }
     
+    /// <summary>
+    /// Returns the first extension for the given format.
+    /// Usually used for output formats
+    /// </summary>
+    /// <exception cref="KeyNotFoundException">When using a ImageFormat without extensions. This should never happen</exception>   
+    public static string GetPrimaryExtensionFor(ImageFormat format)
+    {
+        return _supportedFormats[format].First();
+    }
+
     /// <summary>
     /// Returns the format for a given extension
     /// </summary>
