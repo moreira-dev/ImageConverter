@@ -97,12 +97,17 @@ public class ImageFormats
     /// <summary>
     /// Returns the format for a given extension
     /// </summary>
-    /// <param name="extension">E.g. ".jpeg"</param>
+    /// <param name="extension">E.g. ".jpeg" or ".JPEG"</param>
     /// <returns>E.g. "JPG" or null</returns>
     public ImageFormat? GetFormatByExtension(string extension)
     {
         
-        return _formatsByExtensions.GetValueOrDefault(extension);
+        if (!_formatsByExtensions.TryGetValue(extension.ToLower(), out ImageFormat format))
+        {
+            return null;
+        }
+
+        return format;
     }
 
     /// <summary>

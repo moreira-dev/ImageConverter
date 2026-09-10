@@ -1,42 +1,23 @@
-using ImageConverter.Enums;
-using ImageConverter.Models;
+using ImageConverter.Cli.Options;
 using ImageConverter.Services;
 using Spectre.Console;
 
 namespace ImageConverter.Cli;
-
-public record MenuOption(MenuCommand CommandKey, string DisplayText);
-
-public enum MenuCommand
-{
-    OneImage,
-    OneFolder,
-    ShowStats,
-    Exit
-}
 
 /// <summary>
 /// Handles the app's menu
 /// </summary>
 public class CliManager
 {
-    // Source of truth for menu options. Update here when new options are supported.
-    private readonly MenuOption[] _menuOptions = new MenuOption[]
-    {
-        new MenuOption(MenuCommand.OneImage, "Convert an image"),
-        new MenuOption(MenuCommand.OneFolder, "Convert all images in folder"),
-        new MenuOption(MenuCommand.ShowStats, "Show all image stats in folder"),
-        new MenuOption(MenuCommand.Exit, "Exit")
-    };
-
-    private readonly FileBrowser _imageBrowser;
+    
+    private readonly IMenuOption[] _menuOptions;
 
     private readonly ImageConversion _conversionService;
 
-    public CliManager(ImageConversion conversionService)
+    public CliManager(ImageConversion conversionService, IEnumerable<IMenuOption> menuOptions)
     {
         _conversionService = conversionService;
-        _imageBrowser = new FileBrowser("Select an image", _conversionService.ImageFormats.AllExtensions);
+        _menuOptions = menuOptions.ToArray();
     }
 
     private void ShowTitle()
@@ -51,53 +32,13 @@ public class CliManager
         AnsiConsole.WriteLine(string.Join(", ", _conversionService.ImageFormats.AllExtensions));
     }
 
-    private MenuOption AskForCommand()
+    private IMenuOption AskForCommand()
     {
         return AnsiConsole.Prompt(
-            new SelectionPrompt<MenuOption>()
+            new SelectionPrompt<IMenuOption>()
                 .Title("[bold]Choose an option:[/]")
                 .UseConverter(option => option.DisplayText)
                 .AddChoices(_menuOptions));
-    }
-
-    private ImageFormat AskForOutputFormat(ImageFormat? excludeFormat = null)
-    {
-        // We don't want to output an image to the same format as the input image
-        IReadOnlyList<ImageFormat> supportedFormats = _conversionService.ImageFormats.SupportedFormats.Where(format => format != excludeFormat).ToList();
-        
-        return AnsiConsole.Prompt(
-            new SelectionPrompt<ImageFormat>()
-                .Title("[bold]Choose an output format:[/]")
-                .AddChoices(supportedFormats));
-    }
-
-    private void ConvertOneImage()
-    {
-        string? imagePath = _imageBrowser.SelectFile();
-
-        if (imagePath == null)
-        {
-            AnsiConsole.MarkupLine("[yellow]No image selected.[/]");
-
-            return;
-        }
-
-        ImageFormat? sourceFormat = _conversionService.ImageFormats.GetFormatFromFilePath(imagePath);
-
-        AnsiConsole.MarkupLine($"Selected [green]{Markup.Escape(imagePath)}[/] ([blue]{sourceFormat}[/])");
-
-        ImageFormat targetFormat = AskForOutputFormat(sourceFormat);
-
-        try
-        {
-            string outputPath = _conversionService.Convert(imagePath, targetFormat);
-
-            AnsiConsole.MarkupLine($"Converted to [green]{Markup.Escape(outputPath)}[/]");
-        }
-        catch (Exception exception)
-        {
-            AnsiConsole.MarkupLine($"[red]{Markup.Escape(exception.Message)}[/]");
-        }
     }
 
     public void Run()
@@ -107,16 +48,8 @@ public class CliManager
 
         AnsiConsole.WriteLine();
         
-        MenuOption choice = AskForCommand();
-
-        switch (choice.CommandKey)
-        {
-            case MenuCommand.OneImage:
-                ConvertOneImage();
-                break;
-            default:
-                AnsiConsole.MarkupLine($"Chosen [blue]{choice.CommandKey}[/]");
-                break;
-        }
+        IMenuOption choice = AskForCommand();
+        
+        choice.Run();
     }
 }

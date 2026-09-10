@@ -1,10 +1,12 @@
 ﻿using ImageConverter.Cli;
+using ImageConverter.Cli.Options;
 using ImageConverter.Models.Converters;
 using ImageConverter.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ImageConverter;
 
-internal class Program
+internal abstract class Program
 {
     private static void Main(string[] args)
     {
@@ -16,8 +18,24 @@ internal class Program
             new WebpConverter()
         };
         ImageConversion conversionService = new ImageConversion(supportedFormats);
+        ImageStats statsService = new ImageStats(conversionService.ImageFormats);
         
-        CliManager cli = new CliManager(conversionService);
+        // Dependency injection setup
+        // TODO consider moving to Extension Members
+        ServiceCollection services = new ServiceCollection();
+        services.AddSingleton<ImageConversion>(conversionService);
+        services.AddSingleton<ImageStats>(statsService);
+        
+        // New menu options here
+        services.AddSingleton<IMenuOption, MenuOneImage>();
+        services.AddSingleton<IMenuOption, MenuOneFolder>();
+        services.AddSingleton<IMenuOption, MenuShowStats>();
+        services.AddSingleton<IMenuOption, MenuExit>();
+        services.AddSingleton<CliManager>();
+        
+        ServiceProvider serviceProvider = services.BuildServiceProvider();
+        
+        CliManager cli = serviceProvider.GetRequiredService<CliManager>();
         
         cli.Run();
     }

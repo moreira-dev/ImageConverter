@@ -3,8 +3,8 @@ using Spectre.Console;
 namespace ImageConverter.Cli;
 
 /// <summary>
-/// Lets the user walk through the folders on their computer and pick a file,
-/// instead of having to type or paste a full path
+/// Lets the user walk through the folders on their computer and pick a file
+/// or a folder, instead of having to type a full path
 /// </summary>
 public class FileBrowser
 {
@@ -12,7 +12,17 @@ public class FileBrowser
     {
         Directory,
         File,
+        CurrentDirectory,
         Cancel
+    }
+
+    /// <summary>
+    /// What the user is being asked to pick
+    /// </summary>
+    private enum BrowseTarget
+    {
+        File,
+        Folder
     }
 
     /// <summary>
@@ -42,13 +52,31 @@ public class FileBrowser
     /// <returns>E.g. "/foo/bar.jpeg"</returns>
     public string? SelectFile()
     {
+        return Browse(BrowseTarget.File);
+    }
+
+    /// <summary>
+    /// Shows the browser until the user selects a folder or cancels
+    /// Returns the full path of the chosen folder, or null when they cancelled
+    /// </summary>
+    /// <returns>E.g. "/foo/bar"</returns>
+    public string? SelectFolder()
+    {
+        return Browse(BrowseTarget.Folder);
+    }
+
+    /// <summary>
+    /// Walks the user through their folders until they pick what we asked for
+    /// </summary>
+    private string? Browse(BrowseTarget target)
+    {
         while (true)
         {
             List<BrowseEntry> entries;
 
             try
             {
-                entries = ListEntries(_currentDirectory);
+                entries = ListEntries(_currentDirectory, target);
             }
             catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
             {
@@ -65,6 +93,7 @@ public class FileBrowser
                     _currentDirectory = choice.Path;
                     break;
                 case EntryKind.File:
+                case EntryKind.CurrentDirectory:
                     return choice.Path;
                 case EntryKind.Cancel:
                     return null;
@@ -75,9 +104,10 @@ public class FileBrowser
     /// <summary>
     /// Builds the rows shown for a given folder
     /// </summary>
-    /// <param name="directory">E.g. "/foo/bar"</param>   
+    /// <param name="directory">E.g. "/foo/bar"</param>
+    /// <param name="target">Whether the user is picking a file or a folder</param>
     /// <returns>A list of BrowseEntry rows</returns>
-    private List<BrowseEntry> ListEntries(string directory)
+    private List<BrowseEntry> ListEntries(string directory, BrowseTarget target)
     {
         List<BrowseEntry> entries = new List<BrowseEntry>();
 
@@ -87,19 +117,30 @@ public class FileBrowser
             entries.Add(new BrowseEntry("[grey].. (up one level)[/]", parent.FullName, EntryKind.Directory));
         }
 
+        if (target == BrowseTarget.Folder)
+        {
+            entries.Add(new BrowseEntry("[grey]Use this folder[/]", directory, EntryKind.CurrentDirectory));
+        }
+
         foreach (string subDirectory in Directory.EnumerateDirectories(directory).Order())
         {
             if (IsHidden(subDirectory)) continue;
 
             string name = Markup.Escape(Path.GetFileName(subDirectory));
-            entries.Add(new BrowseEntry($"[DodgerBlue2]{name}/[/]", subDirectory, EntryKind.Directory));
+            entries.Add(new BrowseEntry($"{name}/", subDirectory, EntryKind.Directory));
         }
 
-        foreach (string file in Directory.EnumerateFiles(directory).Order())
+        if (target == BrowseTarget.File)
         {
-            if (IsHidden(file) || !IsAllowed(file)) continue;
+            foreach (string file in Directory.EnumerateFiles(directory).Order())
+            {
+                if (IsHidden(file) || !IsAllowed(file))
+                {
+                    continue;
+                }
 
-            entries.Add(new BrowseEntry(Markup.Escape(Path.GetFileName(file)), file, EntryKind.File));
+                entries.Add(new BrowseEntry(Markup.Escape(Path.GetFileName(file)), file, EntryKind.File));
+            }
         }
 
         entries.Add(new BrowseEntry("[red]Cancel[/]", string.Empty, EntryKind.Cancel));
@@ -137,7 +178,7 @@ public class FileBrowser
 
     private bool IsAllowed(string filePath)
     {
-        return _allowedExtensions.Contains(Path.GetExtension(filePath).ToLowerInvariant());
+        return _allowedExtensions.Contains(Path.GetExtension(filePath).ToLower());
     }
 
     private bool IsHidden(string path)
