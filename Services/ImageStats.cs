@@ -35,7 +35,10 @@ public class ImageStats
         {
             ImageFormat? format = _imageFormats.GetFormatFromFilePath(filePath);
 
-            if (format == null) continue;
+            if (format == null)
+            {
+                continue;
+            }
 
             stats.Add(GetStatsForFile(filePath, format.Value));
         }
