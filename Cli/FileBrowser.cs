@@ -124,7 +124,10 @@ public class FileBrowser
 
         foreach (string subDirectory in Directory.EnumerateDirectories(directory).Order())
         {
-            if (IsHidden(subDirectory)) continue;
+            if (IsHidden(subDirectory))
+            {
+                continue;
+            }
 
             string name = Markup.Escape(Path.GetFileName(subDirectory));
             entries.Add(new BrowseEntry($"{name}/", subDirectory, EntryKind.Directory));
@@ -178,6 +181,7 @@ public class FileBrowser
 
     private bool IsAllowed(string filePath)
     {
+        // TODO use the Dictionary from ImageFormats
         return _allowedExtensions.Contains(Path.GetExtension(filePath).ToLower());
     }
 
