@@ -10,7 +10,7 @@ namespace ImageConverter.Services;
 public class ImageConversion
 {
     private readonly FormatConverter[] _converters;
-    public readonly ImageFormats ImageFormats;
+    public ImageFormats ImageFormats { get; }
     
     public ImageConversion(FormatConverter[] converters)
     {

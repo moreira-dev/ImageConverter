@@ -10,17 +10,8 @@ public class MenuOneFolder(ImageConversion conversionService) : IMenuOption
 
     private readonly FileBrowser _folderBrowser =
         new FileBrowser("Select a folder", conversionService.ImageFormats.AllExtensions);
-    
-    private ImageFormat AskForOutputFormat(ImageFormat? excludeFormat = null)
-    {
-        // We don't want to output an image to the same format as the input image
-        IReadOnlyList<ImageFormat> supportedFormats = conversionService.ImageFormats.SupportedFormats.Where(format => format != excludeFormat).ToList();
-        
-        return AnsiConsole.Prompt(
-            new SelectionPrompt<ImageFormat>()
-                .Title("[bold]Choose an output format:[/]")
-                .AddChoices(supportedFormats));
-    }
+
+    private readonly FormatPicker _formatPicker = new FormatPicker(conversionService.ImageFormats);
 
     public void Run()
     {
@@ -32,7 +23,7 @@ public class MenuOneFolder(ImageConversion conversionService) : IMenuOption
             return;
         }
         
-        ImageFormat targetFormat = AskForOutputFormat();
+        ImageFormat targetFormat = _formatPicker.SelectOutputFormat();
         
         foreach (string filePath in Directory.EnumerateFiles(folderPath).Order())
         {
