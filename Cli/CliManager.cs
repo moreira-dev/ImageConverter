@@ -46,10 +46,18 @@ public class CliManager
         ShowTitle();
         ShowDescription();
 
-        AnsiConsole.WriteLine();
-        
-        IMenuOption choice = AskForCommand();
-        
-        choice.Run();
+        while (true)
+        {
+            AnsiConsole.WriteLine();
+
+            IMenuOption choice = AskForCommand();
+
+            choice.Run();
+
+            if (choice.ExitsApp)
+            {
+                return;
+            }
+        }
     }
 }
